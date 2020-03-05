@@ -126,7 +126,8 @@ def all_windows_3d(bdm_file):
 
         # to make a rectangular array for a heatmap, need to fill in the other points to make all rows the same size
         for i in x_s:
-
+            i
+            # this is a test to make sure github is working
 
         # initialize plot
         fig = plt.figure()
