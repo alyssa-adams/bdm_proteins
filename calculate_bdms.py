@@ -4,8 +4,9 @@ from functions import Complexity
 
 # this script calculates all the bdm values for all possible window sizes for
 
-type = 'proteins'
-grouping = 'EDSSMat90'
+#type = 'proteins'
+type = 'random_proteins'
+grouping = '9'
 pickle_out = 'bdms_' + type + '_' + grouping
 pickle_out = os.path.join('pickle_jar', pickle_out)
 

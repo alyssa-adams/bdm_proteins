@@ -3,6 +3,7 @@ from pybdm import BDM
 from pybdm.partitions import PartitionRecursive
 import numpy as np
 import pickle
+import random
 
 
 # TODO: set up to run on many different kinds of proteins, known and unknown, for phages and hosts
@@ -23,7 +24,7 @@ class Complexity():
         '''
 
         # initialize BDM class
-        if type == 'proteins':
+        if type == 'proteins' or type == 'random_proteins':
             # only one amino acid grouping uses 8 symbols
             if grouping == '8':
                 nsymbols = 8
@@ -37,6 +38,34 @@ class Complexity():
         bdm = BDM(ndim=1, nsymbols=nsymbols, warn_if_missing_ctm=False, partition=PartitionRecursive)
 
         return bdm
+
+
+    # make randomly generated proteins
+    def make_random_proteins(self, max_size, number_of_proteins):
+
+        '''
+        Make some random proteins
+        :param max_size: Max size of the proteins
+        :param number_of_proteins: The number of them
+        :return: Dict {id: group, len, sequence}
+        '''
+
+        proteins = {}
+
+        for protein in range(number_of_proteins):
+
+            # TODO: Min protein size of 80
+            size = random.choice(range(80, max_size))
+            sequence = [random.randint(0, 8) for _ in range(0, size)]
+
+            proteins[protein] = {
+                # TODO: Random groups?
+                'group': random.choice(range(0, 10)),
+                'length': len(sequence),
+                'sequence': sequence
+            }
+
+        return proteins
 
 
     # groupings: 9, EDSSMat90, 8
@@ -77,8 +106,8 @@ class Complexity():
             sequence = ''.join(blob_parts[1:])
 
             # throw away sequences that are too small
-            # TODO: Check threshold of aa sequences that are too small. Now it's at 10.
-            if len(sequence) < 10:
+            # TODO: Check threshold of aa sequences that are too small. Now it's at 80.
+            if len(sequence) < 80:
                 continue
 
             # throw away sequences with an X in them
@@ -102,15 +131,15 @@ class Complexity():
                     # NQ
                     # TS
 
-                    sequence = re.sub('[G]{1,}', '0', sequence)
-                    sequence = re.sub('[P]{1,}', '1', sequence)
-                    sequence = re.sub('[ALVI]{1,}', '2', sequence)
-                    sequence = re.sub('[CM]{1,}', '3', sequence)
-                    sequence = re.sub('[DE]{1,}', '4', sequence)
-                    sequence = re.sub('[RK]{1,}', '5', sequence)
-                    sequence = re.sub('[FYWH]{1,}', '6', sequence)
-                    sequence = re.sub('[NQ]{1,}', '7', sequence)
-                    sequence = re.sub('[TS]{1,}', '8', sequence)
+                    sequence = re.sub('[G]{1}', '0', sequence)
+                    sequence = re.sub('[P]{1}', '1', sequence)
+                    sequence = re.sub('[ALVI]{1}', '2', sequence)
+                    sequence = re.sub('[CM]{1}', '3', sequence)
+                    sequence = re.sub('[DE]{1}', '4', sequence)
+                    sequence = re.sub('[RK]{1}', '5', sequence)
+                    sequence = re.sub('[FYWH]{1}', '6', sequence)
+                    sequence = re.sub('[NQ]{1}', '7', sequence)
+                    sequence = re.sub('[TS]{1}', '8', sequence)
 
                 elif grouping == 'EDSSMat90':
 
@@ -125,15 +154,15 @@ class Complexity():
                     # G
                     # HQ
 
-                    sequence = re.sub('[ILVATM]{1,}', '0', sequence)
-                    sequence = re.sub('[RK]{1,}', '1', sequence)
-                    sequence = re.sub('[N]{1,}', '2', sequence)
-                    sequence = re.sub('[DE]{1,}', '3', sequence)
-                    sequence = re.sub('[CFWY]{1,}', '4', sequence)
-                    sequence = re.sub('[P]{1,}', '5', sequence)
-                    sequence = re.sub('[S]{1,}', '6', sequence)
-                    sequence = re.sub('[G]{1,}', '7', sequence)
-                    sequence = re.sub('[HQ]{1,}', '8', sequence)
+                    sequence = re.sub('[ILVATM]{1}', '0', sequence)
+                    sequence = re.sub('[RK]{1}', '1', sequence)
+                    sequence = re.sub('[N]{1}', '2', sequence)
+                    sequence = re.sub('[DE]{1}', '3', sequence)
+                    sequence = re.sub('[CFWY]{1}', '4', sequence)
+                    sequence = re.sub('[P]{1}', '5', sequence)
+                    sequence = re.sub('[S]{1}', '6', sequence)
+                    sequence = re.sub('[G]{1}', '7', sequence)
+                    sequence = re.sub('[HQ]{1}', '8', sequence)
 
                 elif grouping == '8':
 
@@ -147,14 +176,14 @@ class Complexity():
                     # P
                     # G
 
-                    sequence = re.sub('[AST]{1,}', '0', sequence)
-                    sequence = re.sub('[RQKHE]{1,}', '1', sequence)
-                    sequence = re.sub('[ND]{1,}', '2', sequence)
-                    sequence = re.sub('[C]{1,}', '3', sequence)
-                    sequence = re.sub('[ILMV]{1,}', '4', sequence)
-                    sequence = re.sub('[FYW]{1,}', '5', sequence)
-                    sequence = re.sub('[P]{1,}', '6', sequence)
-                    sequence = re.sub('[G]{1,}', '7', sequence)
+                    sequence = re.sub('[AST]{1}', '0', sequence)
+                    sequence = re.sub('[RQKHE]{1}', '1', sequence)
+                    sequence = re.sub('[ND]{1}', '2', sequence)
+                    sequence = re.sub('[C]{1}', '3', sequence)
+                    sequence = re.sub('[ILMV]{1}', '4', sequence)
+                    sequence = re.sub('[FYW]{1}', '5', sequence)
+                    sequence = re.sub('[P]{1}', '6', sequence)
+                    sequence = re.sub('[G]{1}', '7', sequence)
 
                 else:
                     print('No amino acid grouping specified!')
@@ -193,7 +222,8 @@ class Complexity():
         # All possible window sizes, starting at 5aa
 
         # make window sizes
-        window_sizes = range(5, len(sequence))
+        # TODO: The smallest window size is currently 3aa, DON'T go past 12. Just to up through 12.
+        window_sizes = range(3, 12 + 1)
         for size in window_sizes:
 
             measures = []
@@ -242,6 +272,45 @@ class Complexity():
         :return: None, just makes file
         '''
 
+        # going to save the output in a dict format
+        bdms_dict = {}
+
+        # if random_proteins, then just make the random proteins instead of looping over files
+        if type == 'random_proteins':
+
+            proteins = self.make_random_proteins(max_size=200, number_of_proteins=100)
+
+            # say how many proteins there are
+            print(len(proteins.keys()))
+
+            # for each protein, calculate all the bdms for all the windows
+            for protein in proteins.keys():
+
+                # say which protein its on
+                print(protein)
+
+                sequence = np.array(proteins[protein]['sequence'])
+
+                # get the values for each frame, for each window size
+                # bdms is a dict, where key is window size and value is list of values
+                whole_bdm, bdms = self.all_bdms(bdm, sequence)
+
+                # save the values to the pickle dict
+                bdms_dict[protein] = {
+                    'group': proteins[protein]['group'],
+                    'whole_bdm': whole_bdm,
+                    'bdms': bdms
+                }
+
+            # pickle to save the bdm values
+            with open(pickle_out, 'wb') as handle:
+                pickle.dump(bdms_dict, handle)
+
+            return None
+
+
+        # Else, read in the files
+
         # specify file stuff
         files = os.listdir(data_directory)
         files = list(filter(lambda x: not re.search('DS_Store', x), files))
@@ -257,8 +326,6 @@ class Complexity():
         else:
             print('Please specify type as either genes or proteins!')
 
-        # going to save the output in a dict format
-        bdms_dict = {}
 
         # for each file found in the directory
         for file in files:
