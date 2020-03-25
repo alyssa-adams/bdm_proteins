@@ -7,7 +7,16 @@ import numpy as np
 import seaborn as sns; sns.set()
 
 
-def plot_group(bdm_file):
+'''
+This script makes a BDM heatmap figure per protein
+
+Accepted types: proteins, random_proteins, genes
+Accepted groupings: EDSSMat90, 9
+'''
+
+"""
+# DEPRECIATED
+def group_lineplots(bdm_file):
 
     '''
     Make a bunch of plots, one per tail
@@ -18,7 +27,7 @@ def plot_group(bdm_file):
     '''
 
     # folder stuff
-    figure_folder = os.path.join('figures2', group)
+    figure_folder = os.path.join('figures_old2', group)
     if not os.path.exists(figure_folder):
         os.makedirs(figure_folder)
 
@@ -47,12 +56,12 @@ def plot_group(bdm_file):
     for group in bdms_dict_groups.keys():
 
         # this is where the figure will go
-        figure_folder = os.path.join('figures2')
+        figure_folder = os.path.join('figures_old2')
         figure_out = os.path.join(figure_folder, group + '_' + type + '_' + grouping + '_' + window_size + '.png')
-        #figure_folder = os.path.join('figures2', bdms_dict[tail]['group'])
+        #figure_folder = os.path.join('figures_old2', bdms_dict[tail]['group'])
         #figure_out = os.path.join(figure_folder, tail + '_' + type + '_' + grouping + '_' + window_size + '.png')
 
-        # relevant tails for the plot
+        # relevant data_tails for the plot
         tails = bdms_dict_groups[group]
 
         # get the max x length to normalize all the other lines to
@@ -148,7 +157,7 @@ def stretched_array(array, x_s):
         new_array.append(y_values2)
 
     return new_array
-
+"""
 
 def right_padded_array(array):
 
@@ -169,7 +178,7 @@ def right_padded_array(array):
     return new_array
 
 
-def all_windows_heatmap(bdm_file):
+def sequence_heatmaps(bdm_file, figure_dir):
 
     '''
     Make a bunch of plots, one per tail
@@ -180,7 +189,7 @@ def all_windows_heatmap(bdm_file):
     '''
 
     # folder stuff
-    figure_folder = os.path.join('whole_proteins')
+    figure_folder = os.path.join(figure_dir)
     if not os.path.exists(figure_folder):
         os.makedirs(figure_folder)
 
@@ -244,6 +253,18 @@ def all_windows_heatmap(bdm_file):
         plt.savefig(figure_out)
 
 
-bdm_file = os.path.join('pickle_jar', 'bdms_proteins_EDSSMat90')
-all_windows_heatmap(bdm_file=bdm_file)
+type = 'proteins'
+grouping = 'EDSSMat90'
 
+# input file
+bdm_file_name = 'bdms' + '_' + type + '_' + grouping
+bdm_file = os.path.join('bdm_pickles', bdm_file_name)
+
+# save these figures to these directories
+main_dir = 'figures_whole_proteins'
+type_dir = type
+grouping_dir = grouping
+figure_dir = os.path.join(main_dir, type_dir, grouping_dir)
+
+# Make the figures
+sequence_heatmaps(bdm_file=bdm_file, figure_dir=figure_dir)
