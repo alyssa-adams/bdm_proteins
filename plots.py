@@ -244,6 +244,6 @@ def all_windows_heatmap(bdm_file):
         plt.savefig(figure_out)
 
 
-bdm_file = os.path.join('pickle_jar', 'bdms_random_proteins_5')
+bdm_file = os.path.join('pickle_jar', 'bdms_proteins_EDSSMat90')
 all_windows_heatmap(bdm_file=bdm_file)
 

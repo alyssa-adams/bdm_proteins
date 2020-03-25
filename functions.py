@@ -68,6 +68,93 @@ class Complexity():
         return proteins
 
 
+    # translate amino acid sequences into 9 symbols
+    def group_amino_acids(self, grouping, sequence):
+
+        '''
+        Group the amino acids together into 9 symbols
+        :param grouping: str, either 9 or EDSSMat90
+        :param sequence: str, the sequence to translate
+        :return: np array, the translated sequence
+        '''
+
+        sequence = re.sub('\*', '', sequence)
+
+        if grouping == '9':
+
+            # group the amino acids down to 9 groups
+            # G
+            # P
+            # ALVI
+            # CM
+            # DE
+            # RK
+            # FYWH
+            # NQ
+            # TS
+
+            sequence = re.sub('[G]{1}', '0', sequence)
+            sequence = re.sub('[P]{1}', '1', sequence)
+            sequence = re.sub('[ALVI]{1}', '2', sequence)
+            sequence = re.sub('[CM]{1}', '3', sequence)
+            sequence = re.sub('[DE]{1}', '4', sequence)
+            sequence = re.sub('[RK]{1}', '5', sequence)
+            sequence = re.sub('[FYWH]{1}', '6', sequence)
+            sequence = re.sub('[NQ]{1}', '7', sequence)
+            sequence = re.sub('[TS]{1}', '8', sequence)
+
+        elif grouping == 'EDSSMat90':
+
+            # put second grouping here!
+            # ILVATM
+            # RK
+            # N
+            # DE
+            # CFWY
+            # P
+            # S
+            # G
+            # HQ
+
+            sequence = re.sub('[ILVATM]{1}', '0', sequence)
+            sequence = re.sub('[RK]{1}', '1', sequence)
+            sequence = re.sub('[N]{1}', '2', sequence)
+            sequence = re.sub('[DE]{1}', '3', sequence)
+            sequence = re.sub('[CFWY]{1}', '4', sequence)
+            sequence = re.sub('[P]{1}', '5', sequence)
+            sequence = re.sub('[S]{1}', '6', sequence)
+            sequence = re.sub('[G]{1}', '7', sequence)
+            sequence = re.sub('[HQ]{1}', '8', sequence)
+
+        elif grouping == '8':
+
+            # put third grouping here!
+            # AST
+            # RQKHE
+            # ND
+            # C
+            # ILMV
+            # FYW
+            # P
+            # G
+
+            sequence = re.sub('[AST]{1}', '0', sequence)
+            sequence = re.sub('[RQKHE]{1}', '1', sequence)
+            sequence = re.sub('[ND]{1}', '2', sequence)
+            sequence = re.sub('[C]{1}', '3', sequence)
+            sequence = re.sub('[ILMV]{1}', '4', sequence)
+            sequence = re.sub('[FYW]{1}', '5', sequence)
+            sequence = re.sub('[P]{1}', '6', sequence)
+            sequence = re.sub('[G]{1}', '7', sequence)
+
+        else:
+            print('No amino acid grouping specified!')
+
+        sequence = np.array(list(sequence), dtype=int)
+
+        return sequence
+
+
     # groupings: 9, EDSSMat90, 8
     def read_file(self, path, type, grouping):
 
@@ -86,7 +173,7 @@ class Complexity():
             content = file.read()
 
         # get the proteins in text blobs using regex
-        whole_regex = '>[^\*]*'
+        whole_regex = '>[^\>]*'
         parse_us = re.findall(whole_regex, content)
 
         for blob in parse_us:
@@ -116,77 +203,9 @@ class Complexity():
 
             if type == 'proteins':
 
-                sequence = re.sub('\*', '', sequence)
-
-                if grouping == '9':
-
-                    # group the amino acids down to 9 groups
-                    # G
-                    # P
-                    # ALVI
-                    # CM
-                    # DE
-                    # RK
-                    # FYWH
-                    # NQ
-                    # TS
-
-                    sequence = re.sub('[G]{1}', '0', sequence)
-                    sequence = re.sub('[P]{1}', '1', sequence)
-                    sequence = re.sub('[ALVI]{1}', '2', sequence)
-                    sequence = re.sub('[CM]{1}', '3', sequence)
-                    sequence = re.sub('[DE]{1}', '4', sequence)
-                    sequence = re.sub('[RK]{1}', '5', sequence)
-                    sequence = re.sub('[FYWH]{1}', '6', sequence)
-                    sequence = re.sub('[NQ]{1}', '7', sequence)
-                    sequence = re.sub('[TS]{1}', '8', sequence)
-
-                elif grouping == 'EDSSMat90':
-
-                    # put second grouping here!
-                    # ILVATM
-                    # RK
-                    # N
-                    # DE
-                    # CFWY
-                    # P
-                    # S
-                    # G
-                    # HQ
-
-                    sequence = re.sub('[ILVATM]{1}', '0', sequence)
-                    sequence = re.sub('[RK]{1}', '1', sequence)
-                    sequence = re.sub('[N]{1}', '2', sequence)
-                    sequence = re.sub('[DE]{1}', '3', sequence)
-                    sequence = re.sub('[CFWY]{1}', '4', sequence)
-                    sequence = re.sub('[P]{1}', '5', sequence)
-                    sequence = re.sub('[S]{1}', '6', sequence)
-                    sequence = re.sub('[G]{1}', '7', sequence)
-                    sequence = re.sub('[HQ]{1}', '8', sequence)
-
-                elif grouping == '8':
-
-                    # put third grouping here!
-                    # AST
-                    # RQKHE
-                    # ND
-                    # C
-                    # ILMV
-                    # FYW
-                    # P
-                    # G
-
-                    sequence = re.sub('[AST]{1}', '0', sequence)
-                    sequence = re.sub('[RQKHE]{1}', '1', sequence)
-                    sequence = re.sub('[ND]{1}', '2', sequence)
-                    sequence = re.sub('[C]{1}', '3', sequence)
-                    sequence = re.sub('[ILMV]{1}', '4', sequence)
-                    sequence = re.sub('[FYW]{1}', '5', sequence)
-                    sequence = re.sub('[P]{1}', '6', sequence)
-                    sequence = re.sub('[G]{1}', '7', sequence)
-
-                else:
-                    print('No amino acid grouping specified!')
+                if re.search('>', sequence):
+                    sequence
+                sequence = self.group_amino_acids(grouping, sequence)
 
             else:
 
@@ -195,7 +214,7 @@ class Complexity():
                 sequence = re.sub('C', '2', sequence)
                 sequence = re.sub('G', '3', sequence)
 
-            sequence = np.array(list(sequence), dtype=int)
+                sequence = np.array(list(sequence), dtype=int)
 
             proteins[id] = {
                 'group': group,
@@ -354,10 +373,19 @@ class Complexity():
                 # bdms is a dict, where key is window size and value is list of values
                 whole_bdm, bdms = self.all_bdms(bdm, sequence)
 
+                # integrate BDM
+                # flatten list
+                bdm_list = [item for sublist in list(bdms.values()) for item in sublist]
+                bdms_mass = sum(bdm_list)
+                bdms_area = len(bdm_list)
+
+                bdm_density = bdms_mass/bdms_area
+
                 # save the values to the pickle dict
                 bdms_dict[protein] = {
                     'group': group,
                     'whole_bdm': whole_bdm,
+                    'bdm_density': bdm_density,
                     'bdms': bdms
                 }
 
