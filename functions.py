@@ -261,7 +261,7 @@ class Complexity():
         return bdms
 
 
-    def all_bdms(self, bdm, sequence):
+    def all_bdms(self, bdm, sequence, grouping):
 
         '''
         Gets all bdm values for each window size, and also the entire string
@@ -276,7 +276,70 @@ class Complexity():
         # do sliding window of Xbp until end
         bdms = self.bdm_slidingwindow(bdm, sequence)
 
-        return whole_bdm, bdms
+        # integrate BDM
+        bdm_list = [item for sublist in list(bdms.values()) for item in sublist]
+        bdms_mass = sum(bdm_list)
+        bdms_area = len(bdm_list)
+        bdm_density = bdms_mass / bdms_area
+
+
+        # --- second-order bdm ---
+
+        # for each key, round the values to the grouping
+        if grouping == 'EDSSMat90' or grouping == '9':
+            n_bins = 9
+        else:
+            n_bins = 4
+
+        # make the bins
+        bin_size = 1/float(n_bins)
+        bins = tuple(zip([i*bin_size for i in range(n_bins)], [i*bin_size + bin_size for i in range(n_bins)]))
+        symbols = range(n_bins)
+        bin_values = [i * bin_size + bin_size for i in range(n_bins)]
+        dictionary = dict(zip(bin_values, symbols))
+
+        # bin the bdm values
+        second_order = []
+
+        for key in bdms.keys():
+            bdms_binned = []
+
+            for value in bdms[key]:
+                for bin in bins:
+                    if value >= bin[0] and value < bin[1]:
+                        bdms_binned.append(bin[1])
+                        break
+
+            # turn values into symbols
+            second_bdm = [dictionary[i] for i in bdms_binned]
+
+            # the actual bdm value
+            second_bdm = bdm.bdm(np.array(second_bdm), normalized=True)
+            second_order.append(second_bdm)
+
+
+        # --- third-order bdm ---
+
+        # bin these values
+        third_order = []
+        for value in second_order:
+            for bin in bins:
+                if value >= bin[0] and value < bin[1]:
+                    third_order.append(bin[1])
+                    break
+
+        # turned binned values into integers
+        third_order = [dictionary[i] for i in third_order]
+        third_order = bdm.bdm(np.array(third_order), normalized=True)
+
+        # average second order?
+        second_order = sum(second_order) / len(second_order)
+
+        return {'whole_bdm': whole_bdm,
+                'bdm_density': bdm_density,
+                'second_order': second_order,
+                'third_order': third_order,
+                'bdms': bdms}
 
 
     def calculate_bdms(self, bdm, pickle_out, type, grouping, data_directory):
@@ -312,13 +375,16 @@ class Complexity():
 
                 # get the values for each frame, for each window size
                 # bdms is a dict, where key is window size and value is list of values
-                whole_bdm, bdms = self.all_bdms(bdm, sequence)
+                bdms = self.all_bdms(bdm, sequence, grouping=grouping)
 
                 # save the values to the pickle dict
                 bdms_dict[protein] = {
                     'group': proteins[protein]['group'],
-                    'whole_bdm': whole_bdm,
-                    'bdms': bdms
+                    'whole_bdm': bdms['whole_bdm'],
+                    'bdm_density': bdms['bdm_density'],
+                    'second_order': bdms['second_order'],
+                    'third_order': bdms['third_order'],
+                    'bdms': bdms['bdms']
                 }
 
             # pickle to save the bdm values
@@ -371,22 +437,16 @@ class Complexity():
 
                 # get the values for each frame, for each window size
                 # bdms is a dict, where key is window size and value is list of values
-                whole_bdm, bdms = self.all_bdms(bdm, sequence)
-
-                # integrate BDM
-                # flatten list
-                bdm_list = [item for sublist in list(bdms.values()) for item in sublist]
-                bdms_mass = sum(bdm_list)
-                bdms_area = len(bdm_list)
-
-                bdm_density = bdms_mass/bdms_area
+                bdms = self.all_bdms(bdm, sequence, grouping=grouping)
 
                 # save the values to the pickle dict
                 bdms_dict[protein] = {
                     'group': group,
-                    'whole_bdm': whole_bdm,
-                    'bdm_density': bdm_density,
-                    'bdms': bdms
+                    'whole_bdm': bdms['whole_bdm'],
+                    'bdm_density': bdms['bdm_density'],
+                    'second_order': bdms['second_order'],
+                    'third_order': bdms['third_order'],
+                    'bdms': bdms['bdms']
                 }
 
         # pickle to save the bdm values
