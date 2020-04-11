@@ -4,6 +4,7 @@ from pybdm.partitions import PartitionRecursive
 import numpy as np
 import pickle
 import random
+from snapgene_reader import snapgene_file_to_dict, snapgene_file_to_seqrecord
 
 
 # TODO: set up to run on many different kinds of proteins, known and unknown, for phages and hosts
@@ -155,6 +156,35 @@ class Complexity():
         return sequence
 
 
+    def translate_sequence(self, sequence, grouping):
+
+        '''
+        translate the sequence of base pairs or amino acids into a np array
+        :param sequence: string, the sequence to translate
+        :param grouping: str, proteins or nuc
+        :return: sequence of ints, np array
+        '''
+
+        sequence = sequence.upper()
+
+        if type == 'proteins':
+
+            if re.search('>', sequence):
+                sequence
+            sequence = self.group_amino_acids(grouping, sequence)
+
+        else:
+
+            sequence = re.sub('A', '0', sequence)
+            sequence = re.sub('T', '1', sequence)
+            sequence = re.sub('C', '2', sequence)
+            sequence = re.sub('G', '3', sequence)
+
+            sequence = np.array(list(sequence), dtype=int)
+
+        return sequence
+
+
     # groupings: 9, EDSSMat90, 8
     def read_file(self, path, type, grouping):
 
@@ -166,7 +196,29 @@ class Complexity():
         :return: Dict {id: len, sequence}
         '''
 
-        proteins = {}
+        sequences = {}
+
+
+        # check to see if this is a .dna file type
+
+        extension = os.path.splitext(path)[1]
+        id = os.path.basename(path).split('.')[0]
+
+        if extension == '.dna':
+            file_dict = snapgene_file_to_dict(path)
+            sequence = file_dict['seq']
+
+            # translate into ints
+            sequence = self.translate_sequence(sequence, grouping)
+
+            sequences[id] = {
+                'group': id,
+                'length': len(sequence),
+                'sequence': sequence
+            }
+
+            return sequences
+
 
         # read in the whole file
         with open(path) as file:
@@ -201,28 +253,21 @@ class Complexity():
             if re.search('X', sequence):
                 continue
 
-            if type == 'proteins':
+            # N = Any of the ATCG
+            # Trim away anything that isn't ATCG
+            if re.search('[^ATCG]', sequence):
+                sequence = re.sub('[^ATCG]', '', sequence)
 
-                if re.search('>', sequence):
-                    sequence
-                sequence = self.group_amino_acids(grouping, sequence)
+            # translate into ints
+            sequence = self.translate_sequence(sequence, grouping)
 
-            else:
-
-                sequence = re.sub('A', '0', sequence)
-                sequence = re.sub('T', '1', sequence)
-                sequence = re.sub('C', '2', sequence)
-                sequence = re.sub('G', '3', sequence)
-
-                sequence = np.array(list(sequence), dtype=int)
-
-            proteins[id] = {
+            sequences[id] = {
                 'group': group,
                 'length': len(sequence),
                 'sequence': sequence
             }
 
-        return proteins
+        return sequences
 
 
     def bdm_slidingwindow(self, bdm, sequence):
@@ -242,7 +287,7 @@ class Complexity():
 
         # make window sizes
         # TODO: The smallest window size is currently 3aa, DON'T go past 12. Just to up through 12.
-        window_sizes = range(3, 12 + 1)
+        window_sizes = range(3, 6)  #TODO Change this back!!!! And the things below too!!!!
         for size in window_sizes:
 
             measures = []
@@ -282,7 +327,7 @@ class Complexity():
         bdms_area = len(bdm_list)
         bdm_density = bdms_mass / bdms_area
 
-
+        '''
         # --- second-order bdm ---
 
         # for each key, round the values to the grouping
@@ -334,6 +379,9 @@ class Complexity():
 
         # average second order?
         second_order = sum(second_order) / len(second_order)
+        '''
+        second_order = None
+        third_order = None
 
         return {'whole_bdm': whole_bdm,
                 'bdm_density': bdm_density,
@@ -402,11 +450,11 @@ class Complexity():
 
         # check to see which files to look at
         if type == 'proteins':
-            files = list(filter(lambda x: re.search('\.faa', x), files))
+            files = list(filter(lambda x: re.search('\.faa', x) or re.search('\.dna', x), files))
             # don't set a hard window_size here, so it can change
 
         elif type == 'genes':
-            files = list(filter(lambda x: re.search('\.ffn', x), files))
+            files = list(filter(lambda x: re.search('\.ffn', x) or re.search('\.dna', x) or re.search('\.fasta', x), files))
 
         else:
             print('Please specify type as either genes or proteins!')
@@ -418,39 +466,49 @@ class Complexity():
             print(file)
 
             # specify paths
-            group = file.split('_')[0]
-            proteins_file = os.path.join(data_directory, file)
+            sequence_file = os.path.join(data_directory, file)
 
             # read in the file
-            proteins = self.read_file(proteins_file, type=type, grouping=grouping)
+            sequences = self.read_file(sequence_file, type=type, grouping=grouping)
 
             # say how many proteins there are
-            print(len(proteins.keys()))
+            print(len(sequences.keys()))
 
             # for each protein, calculate all the bdms for all the windows
-            for protein in proteins.keys():
+            for p in sequences.keys():
 
                 # say which protein its on
-                print(protein)
+                print(p)
 
-                sequence = proteins[protein]['sequence']
+                try:  # TODO: This needs to be fixed
 
-                # get the values for each frame, for each window size
-                # bdms is a dict, where key is window size and value is list of values
-                bdms = self.all_bdms(bdm, sequence, grouping=grouping)
+                    sequence = sequences[p]['sequence']
+                    group = sequences[p]['group']
 
-                # save the values to the pickle dict
-                bdms_dict[protein] = {
-                    'group': group,
-                    'whole_bdm': bdms['whole_bdm'],
-                    'bdm_density': bdms['bdm_density'],
-                    'second_order': bdms['second_order'],
-                    'third_order': bdms['third_order'],
-                    'bdms': bdms['bdms']
-                }
+                    # get the values for each frame, for each window size
+                    # bdms is a dict, where key is window size and value is list of values
+                    bdms = self.all_bdms(bdm, sequence, grouping=grouping)
 
-        # pickle to save the bdm values
-        with open(pickle_out, 'wb') as handle:
-            pickle.dump(bdms_dict, handle)
+                    # save the values to the pickle dict
+                    bdms_dict = {
+                        'group': group,
+                        'whole_bdm': bdms['whole_bdm'],
+                        'bdm_density': bdms['bdm_density'],
+                        'second_order': bdms['second_order'],
+                        'third_order': bdms['third_order'],
+                        'bdms': bdms['bdms']
+                    }
+
+                    # pickle to save the bdm values
+                    p = re.sub('/', '|', p)
+                    folder = os.path.join(pickle_out)
+                    if not os.path.exists(folder):
+                        os.makedirs(folder)
+                    with open(pickle_out + '/' + p, 'wb') as handle:
+                        pickle.dump(bdms_dict, handle)
+
+                except:
+                    print('failed')
+                    continue
 
         return None

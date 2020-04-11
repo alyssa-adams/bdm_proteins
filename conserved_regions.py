@@ -148,3 +148,12 @@ if not os.path.exists(figure_folder):
     os.makedirs(figure_folder)
 
 plt.savefig(os.path.join(figure_folder, 'conserved_notconserved_bdm.png'))
+
+
+# variable regions of tails:
+# variable bdm values, compare with random ones of the same size (update figure)
+# Do variable regions have higher bdm value than non-variable ones?
+# Do regions that are highly conserved have higher bdm values?
+# What is the relationship between number of edits and bdm value?
+
+# Plot: Number of edits (lev distance) and difference in BDM

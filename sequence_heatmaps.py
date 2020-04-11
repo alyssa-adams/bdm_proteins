@@ -193,15 +193,16 @@ def sequence_heatmaps(bdm_file, figure_dir):
     if not os.path.exists(figure_folder):
         os.makedirs(figure_folder)
 
-    # get grouping
-    grouping = bdm_file.split('_')[-1]
-
     # load in the bdm values
     bdms_dict = pickle.load(open(bdm_file, 'rb'))
 
     # for each protein, make a single plot
     # for each protein, make an array with different sizes
     for protein in bdms_dict.keys():
+
+        # get grouping
+        #grouping = bdms_dict[protein]['group']
+        grouping = 'EDSSMat90'
 
         # here is the array
         array = list(bdms_dict[protein]['bdms'].values())
@@ -225,16 +226,17 @@ def sequence_heatmaps(bdm_file, figure_dir):
 
         # the index of the position of yticks
         # TODO: yticklabels depends on min window size
-        y_n_ticks = 10
+        y_n_ticks = 3
         y_ticks_space = int(len(new_array) / y_n_ticks)
         y_values = list(range(3, len(new_array) + 3, y_ticks_space))
         # the spacing between ticks
         yticks = list(range(0, len(new_array), y_ticks_space))
 
         # initialize plot
+        sns.set(font_scale=2)
         plt.subplots(figsize=(20, 4))
         ax = sns.heatmap(new_array, xticklabels=x_ticks_space, yticklabels=y_values, square=False,
-                         cbar_kws={'label': 'BDM'})
+                         cbar_kws={"orientation": "horizontal", "label": "BDM"}, cmap="Blues")
 
         # ticks
         ax.tick_params(axis='both', which='both', length=2)
@@ -245,25 +247,28 @@ def sequence_heatmaps(bdm_file, figure_dir):
         # column lines
         ax.vlines(range(0, len(new_array[0])+1, 5), *ax.get_ylim(), linewidth=0.5)
 
-        plt.xlabel('AA')
+        plt.xlabel('BP')
         plt.ylabel('Window Size')
         plt.title(str(protein) + ', AA Grouping: ' + str(grouping))
+        #plt.title(str(protein), size=75, pad=40)
         plt.tight_layout()
         #plt.show()
-        plt.savefig(figure_out)
+        plt.savefig(figure_out, format='png')
 
 
 type = 'proteins'
 grouping = 'EDSSMat90'
 
 # input file
-bdm_file_name = 'bdms' + '_' + type + '_' + grouping
+#bdm_file_name = 'bdms' + '_' + type + '_' + grouping
+bdm_file_name = 'bdms_proteins_EDSSMat90_data_t7_host'
 bdm_file = os.path.join('bdm_pickles', bdm_file_name)
 
 # save these figures to these directories
 main_dir = 'figures_whole_proteins'
 type_dir = type
-grouping_dir = grouping
+grouping_dir = os.path.join(grouping, 't7_host')
+#grouping_dir = 'covid'
 figure_dir = os.path.join(main_dir, type_dir, grouping_dir)
 
 # Make the figures

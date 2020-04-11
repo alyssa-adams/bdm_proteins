@@ -36,3 +36,6 @@ sns.violinplot(x="Group", y="BDM Density", data=df, ax=ax)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode='anchor')
 plt.tight_layout()
 plt.savefig('figures_bdm_groups/whole_bdms_density_' + grouping + '.png')
+
+
+# BDM values of the

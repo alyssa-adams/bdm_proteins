@@ -9,9 +9,9 @@ Accepted types: proteins, random_proteins, genes
 Accepted groupings: EDSSMat90, 9
 '''
 
-type = 'proteins'
-grouping = 'EDSSMat90'
-data_directory = 'data_t7_host'
+type = 'genes'
+grouping = ''
+data_directory = 'data_covid_evolution'
 pickle_out = 'bdms_' + type + '_' + grouping + '_' + data_directory
 pickle_out = os.path.join('bdm_pickles', pickle_out)
 
