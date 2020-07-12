@@ -7,9 +7,6 @@ import random
 from snapgene_reader import snapgene_file_to_dict, snapgene_file_to_seqrecord
 
 
-# TODO: set up to run on many different kinds of proteins, known and unknown, for phages and hosts
-
-
 class Complexity():
 
     '''
@@ -165,8 +162,6 @@ class Complexity():
         :return: sequence of ints, np array
         '''
 
-        sequence = sequence.upper()
-
         if type == 'proteins':
 
             if re.search('>', sequence):
@@ -186,7 +181,7 @@ class Complexity():
 
 
     # groupings: 9, EDSSMat90, 8
-    def read_file(self, path, type, grouping):
+    def read_file(self, path, type, grouping, aligned):
 
         '''
         Read in genome file and save to dict
@@ -244,22 +239,31 @@ class Complexity():
             # make sequence from the other parts
             sequence = ''.join(blob_parts[1:])
 
-            # throw away sequences that are too small
-            # TODO: Check threshold of aa sequences that are too small. Now it's at 80.
-            if len(sequence) < 80:
-                continue
+            sequence = sequence.upper()
 
             # throw away sequences with an X in them
             if re.search('X', sequence):
                 continue
 
-            # N = Any of the ATCG
-            # Trim away anything that isn't ATCG
-            if re.search('[^ATCG]', sequence):
-                sequence = re.sub('[^ATCG]', '', sequence)
+            # if alignment, keep the dashes
+            if aligned:
+                if re.search('[^ATCG\-]', sequence):
+                    sequence = re.sub('[^ATCG\-]', '-', sequence)
 
-            # translate into ints
-            sequence = self.translate_sequence(sequence, grouping)
+            else:
+                # N = Any of the ATCG
+                # Trim away anything that isn't ATCG
+                if re.search('[^ATCG]', sequence):
+                    sequence = re.sub('[^ATCG]', '', sequence)
+
+            # throw away sequences that are too small
+            # TODO: Check threshold of aa sequences that are too small. Now it's at 80.
+            if len(sequence) < 80:
+                continue
+
+            # translate into ints, unless it's aligned
+            if not aligned:
+                sequence = self.translate_sequence(sequence, grouping)
 
             sequences[id] = {
                 'group': group,
@@ -287,7 +291,7 @@ class Complexity():
 
         # make window sizes
         # TODO: The smallest window size is currently 3aa, DON'T go past 12. Just to up through 12.
-        window_sizes = range(3, 6)  #TODO Change this back!!!! And the things below too!!!!
+        window_sizes = range(3, 13)  #TODO Change this back!!!!
         for size in window_sizes:
 
             measures = []
@@ -327,7 +331,7 @@ class Complexity():
         bdms_area = len(bdm_list)
         bdm_density = bdms_mass / bdms_area
 
-        '''
+
         # --- second-order bdm ---
 
         # for each key, round the values to the grouping
@@ -379,9 +383,7 @@ class Complexity():
 
         # average second order?
         second_order = sum(second_order) / len(second_order)
-        '''
-        second_order = None
-        third_order = None
+
 
         return {'whole_bdm': whole_bdm,
                 'bdm_density': bdm_density,
@@ -450,11 +452,13 @@ class Complexity():
 
         # check to see which files to look at
         if type == 'proteins':
-            files = list(filter(lambda x: re.search('\.faa', x) or re.search('\.dna', x), files))
+            files = list(filter(lambda x: re.search('\.faa', x) or re.search('\.dna', x)
+                                          or re.search('\.fasta', x), files))
             # don't set a hard window_size here, so it can change
 
         elif type == 'genes':
-            files = list(filter(lambda x: re.search('\.ffn', x) or re.search('\.dna', x) or re.search('\.fasta', x), files))
+            files = list(filter(lambda x: re.search('\.ffn', x) or re.search('\.dna', x)
+                                          or re.search('\.fasta', x) or re.search('\.pir', x), files))
 
         else:
             print('Please specify type as either genes or proteins!')
@@ -469,13 +473,26 @@ class Complexity():
             sequence_file = os.path.join(data_directory, file)
 
             # read in the file
-            sequences = self.read_file(sequence_file, type=type, grouping=grouping)
+            sequences = self.read_file(sequence_file, type=type, grouping=grouping, aligned=False)
+
+
+            # --- start where it left off (if interrupted) ---
+
+            folder = os.path.join(pickle_out)
+
+            # if the folder for outfiles has been made, check to see what is in there:
+            if os.path.exists(folder):
+                done_files = os.listdir(folder)
+                n_done_files = len(done_files)
+            else:
+                n_done_files = 0
+
 
             # say how many proteins there are
-            print(len(sequences.keys()))
+            print(list(sequences.keys())[n_done_files:])
 
             # for each protein, calculate all the bdms for all the windows
-            for p in sequences.keys():
+            for p in list(sequences.keys())[n_done_files:]:
 
                 # say which protein its on
                 print(p)
