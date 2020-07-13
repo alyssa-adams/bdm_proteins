@@ -153,7 +153,7 @@ class Complexity():
         return sequence
 
 
-    def translate_sequence(self, sequence, grouping):
+    def translate_sequence(self, sequence, grouping, type):
 
         '''
         translate the sequence of base pairs or amino acids into a np array
@@ -164,8 +164,6 @@ class Complexity():
 
         if type == 'proteins':
 
-            if re.search('>', sequence):
-                sequence
             sequence = self.group_amino_acids(grouping, sequence)
 
         else:
@@ -215,61 +213,65 @@ class Complexity():
             return sequences
 
 
-        # read in the whole file
-        with open(path) as file:
-            content = file.read()
+        # read in file line by line
+        with open(path, 'r') as file:
+            blob = []
+            for line in file:
 
-        # get the proteins in text blobs using regex
-        whole_regex = '>[^\>]*'
-        parse_us = re.findall(whole_regex, content)
+                # if line is empty, skip
+                if line == '':
+                    continue
 
-        for blob in parse_us:
+                # check if line is the start
+                if re.search('^\>', line):
 
-            # if empty row, skip
-            if len(blob) == 0:
-                continue
+                    # It's a new blob, put the last one together
+                    blob_joined = ''.join(blob)
+                    blob = []
+                    blob.append(line)
+                else:
+                    blob.append(line)
 
-            # split by newline, join all except the first
-            blob_parts = blob.split('\n')
 
-            # get id and group, save to dict
-            id = re.sub('>', '', blob_parts[0].split()[0])
-            group = blob_parts[0].split()[-1]
+                if len(blob) == 1 and blob_joined != '':
 
-            # make sequence from the other parts
-            sequence = ''.join(blob_parts[1:])
+                    # get id and group, save to dict
+                    id = re.sub('>', '', blob_joined.split()[0])
+                    group = re.findall('\(.*\)', blob_joined)[0]
 
-            sequence = sequence.upper()
+                    # make sequence from the other parts
+                    sequence = re.sub('\n', '', blob_joined).split(')')[-1]
+                    sequence = sequence.upper()
 
-            # throw away sequences with an X in them
-            if re.search('X', sequence):
-                continue
+                    # throw away sequences with an X in them
+                    if re.search('X', sequence):
+                        continue
 
-            # if alignment, keep the dashes
-            if aligned:
-                if re.search('[^ATCG\-]', sequence):
-                    sequence = re.sub('[^ATCG\-]', '-', sequence)
+                    # if alignment, keep the dashes
+                    if aligned:
+                        if re.search('[^ATCG\-]', sequence):
+                            sequence = re.sub('[^ATCG\-]', '-', sequence)
 
-            else:
-                # N = Any of the ATCG
-                # Trim away anything that isn't ATCG
-                if re.search('[^ATCG]', sequence):
-                    sequence = re.sub('[^ATCG]', '', sequence)
+                    else:
+                        # N = Any of the ATCG
+                        # Trim away anything that isn't ATCG
+                        if re.search('[^ATCG]', sequence):
+                            sequence = re.sub('[^ATCG]', '', sequence)
 
-            # throw away sequences that are too small
-            # TODO: Check threshold of aa sequences that are too small. Now it's at 80.
-            if len(sequence) < 80:
-                continue
+                    # throw away sequences that are too small
+                    # TODO: Check threshold of aa sequences that are too small. Now it's at 80.
+                    #if len(sequence) < 80:
+                    #    continue
 
-            # translate into ints, unless it's aligned
-            if not aligned:
-                sequence = self.translate_sequence(sequence, grouping)
+                    # translate into ints, unless it's aligned
+                    if not aligned:
+                        sequence = self.translate_sequence(sequence, grouping)
 
-            sequences[id] = {
-                'group': group,
-                'length': len(sequence),
-                'sequence': sequence
-            }
+                    sequences[id] = {
+                        'group': group,
+                        'length': len(sequence),
+                        'sequence': sequence
+                    }
 
         return sequences
 
@@ -527,5 +529,90 @@ class Complexity():
                 except:
                     print('failed')
                     continue
+
+        return None
+
+
+    def calculate_whole_bdms(self, bdm, pickle_out, type, grouping, data_directory):
+
+        '''
+        Calculates only the whole BDM values for files of sequences
+        :param bdm: initialized bdm class
+        :param pickle_out: str, The file to save these values to
+        :param type: str, either 'genes' or 'proteins'
+        :param grouping: str, amino acid groups, either '9' 'EDSSMat90' or '8'
+        :param data_directory: specify which directory to find all the raw sequences
+        :return: None, just makes pickle file
+        '''
+
+        # specify file stuff, get list of relevant files
+        files = os.listdir(data_directory)
+        files = list(filter(lambda x: not re.search('DS_Store', x), files))
+        files = list(filter(lambda x: re.search('\.faa', x) or re.search('\.dna', x)
+                                          or re.search('\.fasta', x) or re.search('\.fa', x), files))
+
+        # for each file found in the directory
+        for file in files:
+
+            print(file)
+
+            # read in file line by line
+            with open(os.path.join(data_directory, file), 'r') as file:
+                blob = []
+                for line in file:
+
+                    # if line is empty, skip
+                    if line == '':
+                        continue
+
+                    # check if line is the start
+                    if re.search('^\>', line):
+
+                        # It's a new blob, put the last one together
+                        blob_joined = ''.join(blob)
+                        blob = []
+                        blob.append(line)
+                    else:
+                        blob.append(line)
+
+                    # if we've reached the end of a blob, process it
+                    if len(blob) == 1 and blob_joined != '':
+
+                        # get id and group, save to dict
+                        id = re.sub('>', '', blob_joined.split()[0])
+                        group = re.findall('\(.*\)', blob_joined)[0]
+
+                        # say which protein its on
+                        print(id)
+
+                        # make sequence from the other parts
+                        sequence = re.sub('\n', '', blob_joined).split(')')[-1]
+                        sequence = sequence.upper()
+
+                        # SKIP X values (just looking at whole BDM)
+                        sequence = re.sub('[^ILVATMRKNDECFWYPSGHQ]', '', sequence)
+
+                        # translate the sequence
+                        sequence = self.translate_sequence(sequence, grouping, type)
+
+                        # sometimes throws an error, if error, then skip
+                        try:
+                            whole_bdm = bdm.bdm(sequence, normalized=True)
+                        except:
+                            continue
+
+                        # save the values to the pickle dict
+                        bdms_dict = {
+                            'id': id,
+                            'group': group,
+                            'whole_bdm': whole_bdm,
+                        }
+
+                        # pickle to save the bdm values
+                        folder = os.path.join(pickle_out)
+                        if not os.path.exists(folder):
+                            os.makedirs(folder)
+                        with open(os.path.join(pickle_out, id + '_whole_bdm.p'), 'wb') as handle:
+                            pickle.dump(bdms_dict, handle)
 
         return None
