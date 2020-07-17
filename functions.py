@@ -558,7 +558,11 @@ class Complexity():
 
             # read in file line by line
             with open(os.path.join(data_directory, file), 'r') as file:
+
                 blob = []
+                n_blobs = 0
+                bdms_dict = {}
+
                 for line in file:
 
                     # if line is empty, skip
@@ -571,7 +575,9 @@ class Complexity():
                         # It's a new blob, put the last one together
                         blob_joined = ''.join(blob)
                         blob = []
+                        n_blobs += 1
                         blob.append(line)
+
                     else:
                         blob.append(line)
 
@@ -602,17 +608,22 @@ class Complexity():
                             continue
 
                         # save the values to the pickle dict
-                        bdms_dict = {
+                        bdms_dict[id] = {
                             'id': id,
                             'group': group,
                             'whole_bdm': whole_bdm,
                         }
 
-                        # pickle to save the bdm values
-                        folder = os.path.join(pickle_out)
-                        if not os.path.exists(folder):
-                            os.makedirs(folder)
-                        with open(os.path.join(pickle_out, id + '_whole_bdm.p'), 'wb') as handle:
-                            pickle.dump(bdms_dict, handle)
+
+                        if n_blobs % 1000 == 0:
+
+                            # pickle to save the bdm values
+                            # can't save one file per blob because of memory
+                            folder = os.path.join(pickle_out)
+                            if not os.path.exists(folder):
+                                os.makedirs(folder)
+                            with open(os.path.join(pickle_out, str(int(n_blobs/1000)) + '_whole_bdm.p'), 'wb') as handle:
+                                pickle.dump(bdms_dict, handle)
+                            bdms_dict = {}
 
         return None
