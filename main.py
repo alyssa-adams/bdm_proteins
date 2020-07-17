@@ -27,11 +27,12 @@ pickle_out = os.path.join('pickle_jar', data_source + '_bdms')
 # calculate it and save to the pickle file
 #genecomplexity.calculate_whole_bdms(bdm=bdm, pickle_out=pickle_out, type=type, grouping=grouping, data_directory=protein_sequences)
 
-'''
+
 # specify file stuff, get list of relevant files
 files = os.listdir(pickle_out)
-files = list(filter(lambda x: not re.search('DS_Store', x), files))
+files = list(filter(lambda x: not re.search('DS_Store', x), files))[0:1]
 
+'''
 # Load in all the BDMs
 bdm_dict = {}
 for file in files:
