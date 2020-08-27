@@ -1,12 +1,14 @@
 # TODO: Need to make sure all the directories self-create
 # TODO: Need to make sure all dependencies can auto-install, cut out any unnecessary ones
 # TODO: Make the main script, so it can run from the command line
+# TODO: Implement dask
 
 # assume data is downloaded in data folder
 # assume PPIs are in data folder too
 # For each protein, calculate the BDM (just do whole BDM for now)
 
 from itertools import islice
+import random
 import numpy as np
 import os
 import pickle, re
@@ -29,6 +31,13 @@ protein_sequences = os.path.join('data/', data_source + '_sequences')
 pickle_out = os.path.join('pickle_jar/', data_source + '_bdms')
 
 
+# load in the taxonomy tree from ICTV
+# When matching, don't go lower than the family level
+
+taxonomy_tree = pd.read_csv('ICTV Master Species List 2019.v1.xlsx - ICTV2019 Master Species List#35.csv')
+taxonomy_tree['Species'] = taxonomy_tree['Species'].str.replace(' [^ ]+$', '', regex=True)
+
+
 # ==================================================================================================
 # --------------------------- Step 1: Get the BDMs of the proteins ---------------------------
 # ==================================================================================================
@@ -44,23 +53,35 @@ print('step 1')
 
 # or load in bdm values from pickle files from previous run
 files = os.listdir(pickle_out)
-files = list(filter(lambda x: not re.search('DS_Store', x) and not re.search('diffs', x), files))
+random.shuffle(files)  # <<<< for dev reasons
+files = list(filter(lambda x: not re.search('DS_Store', x) and not re.search('diffs', x), files))[:100] # <<<<<<<<<<<<
 
 # Save BDM values to df
 bdm_dict = {}
 for file in files:
     with open(os.path.join(pickle_out, file), 'rb') as f:
         bdms = pickle.load(f)
+        for k in bdms.keys():
+            bdms[k]['group'] = bdms[k]['group'].replace('(', '').replace(')', '')
+            species = bdms[k]['group']
+
+            # TODO: species could be a virus or a host, because both proteins
+            bdms[k]['family'] = taxonomy_tree[taxonomy_tree['Species'] == species].index
+            bdms[k]['order'] = bdms
+            bdms[k]['class'] = bdms
+            bdms[k]['phylum'] = bdms
+            bdms[k]['kingdom'] = bdms
         bdm_dict.update(bdms)
 df = pd.DataFrame.from_dict(bdm_dict, orient='index')
 groups = list(set(df['group'].to_list()))
-df = df.sort_values(by=['whole_bdm'])
+#df = df.sort_values(by=['whole_bdm'])
 df = df.reset_index(drop=True)
 df = df.reset_index()
 
 # Plot the distribution of BDMs
-bdm_dist = list(map(lambda x: x[-1]['whole_bdm'], bdm_dict.items()))
-bdm_dist.sort(reverse=True)
+# TODO: This needs to be only for viruses, not the hosts! Do the hosts and the virus lines separately.
+#bdm_dist = list(map(lambda x: x[-1]['whole_bdm'], bdm_dict.items()))
+#bdm_dist.sort(reverse=True)
 #ax = sns.scatterplot(x="index", y="whole_bdm", hue="group", data=df, linewidth=0, alpha=0.2, s=5, legend=False)
 #plt.yscale('log')
 #plt.gray()
