@@ -5,6 +5,10 @@ import numpy as np
 import pickle
 import random
 from snapgene_reader import snapgene_file_to_dict, snapgene_file_to_seqrecord
+import csv
+from ete3 import NCBITaxa
+
+ncbi = NCBITaxa()
 
 
 class Complexity():
@@ -322,7 +326,7 @@ class Complexity():
         '''
 
         # BDM for the whole sequence
-        whole_bdm = bdm.bdm(sequence, normalized=True)
+        whole_bdm = bdm.bdm(sequence, normalized=False)
 
         # do sliding window of Xbp until end
         bdms = self.bdm_slidingwindow(bdm, sequence)
@@ -586,7 +590,10 @@ class Complexity():
 
                         # get id and group, save to dict
                         id = re.sub('>', '', blob_joined.split()[0])
-                        group = re.findall('\(.*\)', blob_joined)[0]
+                        try:  # TODO: this part is for a short bin check
+                            group = re.findall('\(.*\)', blob_joined)[0]
+                        except:
+                            group = None
 
                         # say which protein its on
                         print(id)
@@ -600,10 +607,11 @@ class Complexity():
 
                         # translate the sequence
                         sequence = self.translate_sequence(sequence, grouping, type)
+                        length = len(sequence)
 
                         # sometimes throws an error, if error, then skip
                         try:
-                            whole_bdm = bdm.bdm(sequence, normalized=True)
+                            whole_bdm = bdm.bdm(sequence, normalized=False)
                         except:
                             continue
 
@@ -612,6 +620,7 @@ class Complexity():
                             'id': id,
                             'group': group,
                             'whole_bdm': whole_bdm,
+                            'length': length,
                         }
 
 
@@ -626,4 +635,20 @@ class Complexity():
                                 pickle.dump(bdms_dict, handle)
                             bdms_dict = {}
 
+            # TODO: bins
+            folder = os.path.join(pickle_out)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            with open(os.path.join(pickle_out, 'whole_bdm.p'), 'wb') as handle:
+                pickle.dump(bdms_dict, handle)
+
         return None
+
+
+    # https://stackoverflow.com/questions/43867631/how-can-i-get-taxonomic-rank-names-from-taxid
+    def get_desired_ranks(taxid, desired_ranks):
+        lineage = ncbi.get_lineage(taxid)
+        names = ncbi.get_taxid_translator(lineage)
+        lineage2ranks = ncbi.get_rank(names)
+        ranks2lineage = dict((rank, taxid) for (taxid, rank) in lineage2ranks.items())
+        return{'{}_id'.format(rank): ranks2lineage.get(rank, None) for rank in desired_ranks}
