@@ -11,12 +11,13 @@ import os
 import pickle, re
 import pandas as pd
 import dask.dataframe as dd
-import random, json, csv
+import random, json, csv, time
 from ete3 import NCBITaxa
 import networkx as nx
 import numpy as np
 from matplotlib.pyplot import figure
 from multiprocessing import Pool, freeze_support
+import requests
 
 from functions import Complexity
 
@@ -26,6 +27,50 @@ plt.style.use('ggplot')
 #sns.set(rc={'figure.figsize': (8, 6)})
 from networkx.drawing.nx_agraph import graphviz_layout
 
+
+
+# =================== Load in all the protein names from the bdm df ===================  # TODO: Need to change the order of loading in files
+
+data_source = 'virusstring'
+pickle_out = os.path.join('pickle_jar/', data_source + '_bdms')
+"""with open(os.path.join(pickle_out, 'df.p'), 'rb') as f:
+    df = pickle.load(f)
+
+# just get the virus protein names
+df = df.loc[df['protein_type'] == 'virus']
+virus_proteins = list(df['string_id'])
+
+
+# =================== Get the PPIs from the API ===================
+
+api_call = "https://version-11-0.string-db.org/api/json/interaction_partners?identifiers="
+
+ppis = []
+
+# do ten per call to save time
+def chunks(lst, n):
+    "Yield successive n-sized chunks from lst."
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+virus_proteins = chunks(virus_proteins, 20)
+
+for proteins in virus_proteins:
+    api_call_end = '%0d'.join(proteins)
+    r = requests.get(api_call+api_call_end)
+    interactions = json.loads(r.text)
+    ppis.extend(interactions)
+    time.sleep(1)
+    print('.')
+
+# save to a pickle file
+with open(os.path.join(pickle_out, 'ppis.p'), 'wb') as handle:
+    pickle.dump(ppis, handle)
+
+quit()"""
+
+with open(os.path.join(pickle_out, 'ppis.p'), 'rb') as f:
+    ppis = pickle.load(f)
 
 # Look at the complexity of these proteins for binning purposes real quick
 # initialize class from Functions.py file (only used to calculate bdms)
@@ -71,7 +116,7 @@ plt.show()
 type = 'proteins'
 grouping = 'EDSSMat90'
 data_source = 'virusstring'
-ppis = os.path.join('data', data_source + '_ppis')
+#ppis = os.path.join('data', data_source + '_ppis')
 protein_sequences = os.path.join('data/', data_source + '_sequences')
 pickle_out = os.path.join('pickle_jar/', data_source + '_bdms')
 
@@ -150,7 +195,62 @@ def make_ppi_out_edges():
     with open(os.path.join(pickle_out, 'ppi_out_edges.p'), 'wb') as handle:
         pickle.dump(ppi_out_edges, handle)
 
-#make_ppi_out_edges()
+
+def make_ppi_out_edges2():
+
+    ppi_out_edges = {}
+    for ppi in p:
+
+        # skip first line, save header
+        header = next(f)
+        header = header.split()
+        n = 0
+
+        # read in line by line
+        for i, line in enumerate(f):
+
+            line = line.split()
+
+            # only load in the experiment and database ones
+            experiments = int(line[9])
+            database = int(line[11])
+            if experiments == 0 and database == 0:
+                continue
+
+            p1 = line[0].decode("utf-8")
+            p2 = line[1].decode("utf-8")
+
+            # if new key, add as list
+            try:
+                ppi_out_edges[p1].append(p2)
+                ppi_out_edges[p1] = list(set(ppi_out_edges[p1]))
+            except:
+                ppi_out_edges[p1] = [p2]
+
+            #if p1_ncbi not in ppi_out_edges.keys():
+            #    ppi_out_edges[p1_ncbi] = [p2_ncbi]
+            #else:  # else append to existing list
+            #    ppi_out_edges[p1_ncbi].append(p2_ncbi)
+
+            # bi-directional edges, so add to both keys
+            try:
+                ppi_out_edges[p2].append(p1)
+                ppi_out_edges[p2] = list(set(ppi_out_edges[p2]))
+            except:
+                ppi_out_edges[p2] = [p1]
+
+            #if p2_ncbi not in ppi_out_edges.keys():
+            #    ppi_out_edges[p2_ncbi] = [p1_ncbi]
+            #else:  # else append to existing list
+            #    ppi_out_edges[p2_ncbi].append(p1_ncbi)
+
+    # pickle this dict
+    folder = os.path.join(pickle_out)
+    with open(os.path.join(pickle_out, 'ppi_out_edges.p'), 'wb') as handle:
+        pickle.dump(ppi_out_edges, handle)
+
+
+#make_ppi_out_edges2()
 #quit()
 
 #with open(os.path.join(pickle_out, 'ppi_out_edges.p'), 'rb') as f:
@@ -327,7 +427,7 @@ def make_df():
     with open(os.path.join(pickle_out, 'df.p'), 'wb') as handle:
         pickle.dump(df, handle)
 
-#make_df()
+make_df()
 #quit()
 # TODO: Make all these pickle loading/unloading into a log file that sees if these files are all made or not
 #  and whether or not everything needs to be calculated or not
